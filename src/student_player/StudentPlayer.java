@@ -7,6 +7,7 @@ import boardgame.Move;
 import tablut.TablutBoardState;
 import tablut.TablutMove;
 import tablut.TablutPlayer;
+import coordinates.*;
 
 
 
@@ -16,8 +17,9 @@ public class StudentPlayer extends TablutPlayer {
 	HashMap<String, Double> moveValue = new HashMap<String, Double>();
 	int player;
 	int opponent;
-	public static final double trim = -0.4; //adjustment for the assymetrical game
-	public static final double aggression = 0.1; //how much taking a piece is valued
+	public static final double balance = 0.5; //adjustment for the asymmetrical game in unseen moves
+	public static final double aggression = 0.2; //how much taking a piece is valued
+	public static final double optimism = 0.1;//weighting for kings proximity to corner
 
     /**
      * You must modify this constructor to return your student number. This is
@@ -48,10 +50,10 @@ public class StudentPlayer extends TablutPlayer {
     		
 	    Move myMove = randomMove(bs);
     		if(player == 1) { //player is Swedes
-	        double myMoveScore = maxValue(myMove, bs, 2, 1);
+	        double myMoveScore = maxValue(myMove, bs, 1, 1);
 	        ArrayList<TablutMove> moves = bs.getAllLegalMoves();
 	        for(TablutMove move : moves) {
-		        	double moveScore = maxValue(move, bs, 2, 1);
+		        	double moveScore = maxValue(move, bs, 1, 1);
 		       	if(moveScore > myMoveScore) {
 		       		myMove = move;
 		        		myMoveScore = moveScore;
@@ -59,10 +61,10 @@ public class StudentPlayer extends TablutPlayer {
 	        }
     		}
     		else { //player is Muscovites
-    			double myMoveScore = minValue(myMove, bs, 2, 1);
+    			double myMoveScore = minValue(myMove, bs, 1, 1);
     	        ArrayList<TablutMove> moves = bs.getAllLegalMoves();
     	        for(TablutMove move : moves) {
-    		        	double moveScore = minValue(move, bs, 2, 1);
+    		        	double moveScore = minValue(move, bs, 1, 1);
     		       	if(moveScore < myMoveScore) {
     		       		myMove = move;
     		        		myMoveScore = moveScore;
@@ -78,21 +80,14 @@ public class StudentPlayer extends TablutPlayer {
     	 	return moves.get(rand.nextInt(moves.size()));
     }
     
-    public double eval(Move move) {
+    public double eval(Move move, TablutBoardState bs, int prevOpPieces, int currentOpPieces) { //RAVE-based eval with bonuses for winning and taking pieces
+    		double value;
     		if(moveValue.containsKey(move.toTransportable())) {
-    			return moveValue.get(move.toTransportable());
-    		}
-    		else {
-    			return trim; //if it hasn't been seen, give it a "neutral" score
-    		}
-    }
-    
-    public double maxValue(Move m, TablutBoardState bs, int maxDepth, int depth) { //minimax no pruning
-    		TablutBoardState bsClone = (TablutBoardState) bs.clone();
-    		bsClone.processMove((TablutMove) m);
-    		
-    		int prevOpPieces = bs.getNumberPlayerPieces(opponent);
-    		int currentOpPieces = bs.getNumberPlayerPieces(opponent);
+			value =  moveValue.get(move.toTransportable());
+		}
+		else {
+			value =  balance; //if it hasn't been seen, give it a "neutral" score
+		}
     		
     		int direction; //to account for which side
     		if(player == 1) {
@@ -100,26 +95,46 @@ public class StudentPlayer extends TablutPlayer {
     		}
     		else {
     			direction = -1;
-    		}
+    		}	
     		
-    		if(depth == maxDepth) {
-    			double moveEval = eval(m);
+    		if(bs.gameOver()) { //massive bonus for winning
+			int winner = bs.getWinner();
+			if(winner == 0) {
+				value -= 100;
+			}
+			else if(winner == 1) {
+				value += 100;
+			}
+		}
+    		
+    		if(prevOpPieces > currentOpPieces) { //bonus for taking pieces with this move
+			value += (prevOpPieces - currentOpPieces)*aggression*direction; //because multiple pieces can be taken in one move
+		}  		
+    		return value;
+    }
+    
+    public double maxValue(Move m, TablutBoardState bs, int maxDepth, int depth) { //minimax no pruning
+    		TablutBoardState bsClone = (TablutBoardState) bs.clone();
+    		bsClone.processMove((TablutMove) m);
+    		
+    		int prevOpPieces = bs.getNumberPlayerPieces(opponent);
+    		int currentOpPieces = bsClone.getNumberPlayerPieces(opponent);
+    		
+    		if(depth >= maxDepth) {
+    			double moveEval = eval(m, bsClone, prevOpPieces, currentOpPieces);
+    			return moveEval; 			
+    		}
+    		else {
     			if(bsClone.gameOver()) {
     				int winner = bsClone.getWinner();
     				if(winner == 0) {
-    					moveEval -= 100;
+    					return -1000.0;
     				}
     				else if(winner == 1) {
-    					moveEval += 100;
+    					return 1000.0;
     				}
     			}
-    			if(prevOpPieces > currentOpPieces) { //bonus for taking pieces with this move
-    				moveEval += (prevOpPieces - currentOpPieces)*aggression*direction; //because multiple pieces can be taken in one move
-    			}
-    			return moveEval;
     			
-    		}
-    		else {
     			double max = -1000000; //all moves will be more than this
     			for(TablutMove move: bsClone.getAllLegalMoves()) {
     				double moveVal = minValue(move, bsClone, maxDepth, depth+1);
@@ -136,33 +151,23 @@ public class StudentPlayer extends TablutPlayer {
 		bsClone.processMove((TablutMove) m);
 		
 		int prevOpPieces = bs.getNumberPlayerPieces(opponent);
-		int currentOpPieces = bs.getNumberPlayerPieces(opponent);
-		
-		int direction; //to account for which side player is on in capture bonus
-		if(player == 1) {
-			direction = 1;
-		}
-		else {
-			direction = -1;
-		}
+		int currentOpPieces = bsClone.getNumberPlayerPieces(opponent);
     		
-		if(depth == maxDepth) {
-			double moveEval = eval(m);
-			if(bsClone.gameOver()) {
-				int winner = bsClone.getWinner();
-				if(winner == 0) {
-					moveEval -= 100;
-				}
-				else if(winner == 1) {
-					moveEval += 100;
-				}
-			}
-			if(prevOpPieces > currentOpPieces) { //bonus for taking pieces with this move
-				moveEval += (prevOpPieces - currentOpPieces)*aggression*direction; //because multiple pieces can be taken in one move
-			}
+		if(depth >= maxDepth) {
+			double moveEval = eval(m, bsClone, prevOpPieces, currentOpPieces);
 			return moveEval;
 		}
     		else {
+    			if(bsClone.gameOver()) {
+    				int winner = bsClone.getWinner();
+    				if(winner == 0) {
+    					return -1000.0;
+    				}
+    				else if(winner == 1) {
+    					return 1000.0;
+    				}
+    			}
+    			
     			double min = 1000000; //all moves will be less than this
     			for(TablutMove move: bsClone.getAllLegalMoves()) {
     				double moveVal = maxValue(move, bsClone, maxDepth, depth+1);
