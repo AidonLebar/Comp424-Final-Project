@@ -156,6 +156,7 @@ public class fastAutoplay {
 					return -1;
 				}
 				else {
+					System.out.println("D");
 					return 0;
 				}
 			}

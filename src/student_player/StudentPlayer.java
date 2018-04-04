@@ -15,11 +15,13 @@ import coordinates.*;
 public class StudentPlayer extends TablutPlayer {
 	private Random rand = new Random();
 	HashMap<String, Double> moveValue = new HashMap<String, Double>();
+	HashMap<String, Integer> moveSeen = new HashMap<String, Integer>();
 	int player;
 	int opponent;
-	public static final double balance = 0.5; //adjustment for the asymmetrical game in unseen moves
-	public static final double aggression = 0.2; //how much taking a piece is valued
-	public static final double optimism = 0.1;//weighting for kings proximity to corner
+	public static final double balance = 0; //adjustment for the asymmetrical game in unseen moves
+	public static final double aggression = 0.15; //how much taking a piece is valued
+	public static final double optimism = 0.05; //weighting for kings proximity to corner
+	public static final double familiarity = 0; //penalty for making the same move multiple times
 
     /**
      * You must modify this constructor to return your student number. This is
@@ -36,6 +38,7 @@ public class StudentPlayer extends TablutPlayer {
      * make decisions.
      */
     public Move chooseMove(TablutBoardState bs) {
+    		double finalMoveScore;
     		if(bs.getTurnNumber() == 0) { //first turn set up
     			moveValue = MyTools.deserializeRAVE(); //deserialize action value HashMap 
     			
@@ -50,27 +53,31 @@ public class StudentPlayer extends TablutPlayer {
     		
 	    Move myMove = randomMove(bs);
     		if(player == 1) { //player is Swedes
-	        double myMoveScore = maxValue(myMove, bs, 1, 1);
+    			double myMoveScore = alphabeta(myMove, bs, 1, -1000000, 1000000, true);
 	        ArrayList<TablutMove> moves = bs.getAllLegalMoves();
 	        for(TablutMove move : moves) {
-		        	double moveScore = maxValue(move, bs, 1, 1);
+	        		double moveScore = alphabeta(move, bs, 1, -1000000, 1000000, true);
 		       	if(moveScore > myMoveScore) {
 		       		myMove = move;
 		        		myMoveScore = moveScore;
 		        	}
 	        }
+	        finalMoveScore = myMoveScore;
     		}
     		else { //player is Muscovites
-    			double myMoveScore = minValue(myMove, bs, 1, 1);
+    			double myMoveScore = alphabeta(myMove, bs, 1, -1000000, 1000000, false);
     	        ArrayList<TablutMove> moves = bs.getAllLegalMoves();
     	        for(TablutMove move : moves) {
-    		        	double moveScore = minValue(move, bs, 1, 1);
+    	        		double moveScore = alphabeta(move, bs, 1, -1000000, 1000000, false);
     		       	if(moveScore < myMoveScore) {
     		       		myMove = move;
     		        		myMoveScore = moveScore;
     		        	}
     	        }
+    	        finalMoveScore = myMoveScore;
     		}
+    		//System.out.println("Move: " + myMove.toTransportable() + " Value: " + finalMoveScore);
+    		moveSeen.put(myMove.toTransportable(), 1); //remember the moves we've already made TODO increasing penalty for each time we make it
     		return myMove;
     }
     
@@ -80,7 +87,8 @@ public class StudentPlayer extends TablutPlayer {
     	 	return moves.get(rand.nextInt(moves.size()));
     }
     
-    public double eval(Move move, TablutBoardState bs, int prevOpPieces, int currentOpPieces) { //RAVE-based eval with bonuses for winning and taking pieces
+    //RAVE-based eval with bonuses for winning and taking pieces
+    public double eval(Move move, TablutBoardState bs, int prevOpPieces, int currentOpPieces) { 
     		double value;
     		if(moveValue.containsKey(move.toTransportable())) {
 			value =  moveValue.get(move.toTransportable());
@@ -102,80 +110,86 @@ public class StudentPlayer extends TablutPlayer {
 			if(winner == 0) {
 				value -= 100;
 			}
-			else if(winner == 1) {
+			else if(winner == 1) { //a bit redundant
 				value += 100;
 			}
 		}
     		
     		if(prevOpPieces > currentOpPieces) { //bonus for taking pieces with this move
 			value += (prevOpPieces - currentOpPieces)*aggression*direction; //because multiple pieces can be taken in one move
-		}  		
+		}
+    		
+    		if(moveSeen.containsKey(move.toTransportable())) { //penalty against moves we've already made
+    			value -= direction*familiarity;
+    		}
+    		
+    		Coord kingPos = bs.getKingPosition();
+	    	if(kingPos != null) {
+	    		int distToCorner = Coordinates.distanceToClosestCorner(kingPos);
+	    		value += 8 - optimism*distToCorner;
+	    	}
     		return value;
     }
     
-    public double maxValue(Move m, TablutBoardState bs, int maxDepth, int depth) { //minimax no pruning
+    //Soft-fail alpha-beta
+    public double alphabeta(Move m, TablutBoardState bs, int toMaxDepth, double alpha, double beta, boolean max) {
     		TablutBoardState bsClone = (TablutBoardState) bs.clone();
-    		bsClone.processMove((TablutMove) m);
-    		
-    		int prevOpPieces = bs.getNumberPlayerPieces(opponent);
-    		int currentOpPieces = bsClone.getNumberPlayerPieces(opponent);
-    		
-    		if(depth >= maxDepth) {
-    			double moveEval = eval(m, bsClone, prevOpPieces, currentOpPieces);
-    			return moveEval; 			
-    		}
-    		else {
-    			if(bsClone.gameOver()) {
-    				int winner = bsClone.getWinner();
-    				if(winner == 0) {
-    					return -1000.0;
-    				}
-    				else if(winner == 1) {
-    					return 1000.0;
-    				}
-    			}
-    			
-    			double max = -1000000; //all moves will be more than this
-    			for(TablutMove move: bsClone.getAllLegalMoves()) {
-    				double moveVal = minValue(move, bsClone, maxDepth, depth+1);
-    				if(moveVal > max) {
-    					max = moveVal;
-    				}
-    			}
-    			return max;
-    		}
-    }
-    
-    public double minValue(Move m, TablutBoardState bs, int maxDepth, int depth) { //minimax no pruning
-		TablutBoardState bsClone = (TablutBoardState) bs.clone();
 		bsClone.processMove((TablutMove) m);
-		
-		int prevOpPieces = bs.getNumberPlayerPieces(opponent);
-		int currentOpPieces = bsClone.getNumberPlayerPieces(opponent);
-    		
-		if(depth >= maxDepth) {
-			double moveEval = eval(m, bsClone, prevOpPieces, currentOpPieces);
-			return moveEval;
-		}
-    		else {
-    			if(bsClone.gameOver()) {
-    				int winner = bsClone.getWinner();
-    				if(winner == 0) {
-    					return -1000.0;
-    				}
-    				else if(winner == 1) {
+    	
+    		if(toMaxDepth == 0) { //max depth reached
+    			int prevOpPieces = bs.getNumberPlayerPieces(opponent);
+    			int currentOpPieces = bsClone.getNumberPlayerPieces(opponent);
+    	 		return eval(m, bs, prevOpPieces, currentOpPieces);
+    	 	}
+    		//MAX PLAYER
+    		if(max) {
+    			double v = -1000000;
+    			if(bsClone.gameOver()) { //if game ends this move, no need to recurse
+    				if(bsClone.getWinner() == 1) { //swedes win
     					return 1000.0;
     				}
-    			}
-    			
-    			double min = 1000000; //all moves will be less than this
-    			for(TablutMove move: bsClone.getAllLegalMoves()) {
-    				double moveVal = maxValue(move, bsClone, maxDepth, depth+1);
-    				if(moveVal < min) {
-    					min = moveVal;
+    				else if(bsClone.getWinner() == 0){ //muscovites win
+    					return -1000.0;
+    				}
+    				else {
+    					return balance;
     				}
     			}
-    			return min;
+    			else { //the game is still on
+	    			for(TablutMove move: bsClone.getAllLegalMoves()) {
+	    				v = Math.max(v, alphabeta(move, bsClone, toMaxDepth-1, alpha, beta, false));
+	    				alpha = Math.max(alpha, v);
+	    				if(beta <= alpha){
+	    					break;
+	    				}
+	    			}
+	    			return v;
+    			}
+    		}
+    		 //MIN PLAYER
+    		else {
+    			double v = 1000000;
+    			if(bsClone.gameOver()) { //if game ends this move, no need to recurse
+    				if(bsClone.getWinner() == 1) { //swedes win
+    					return 1000.0;
+    				}
+    				else if(bsClone.getWinner() == 0){ //muscovites win
+    					return -1000.0;
+    				}
+    				else {
+    					return balance;
+    				}
+    			}
+    			else { //the game is still on
+	    			for(TablutMove move: bsClone.getAllLegalMoves()) {
+	    				v = Math.min(v, alphabeta(move, bsClone, toMaxDepth-1, alpha, beta, true));
+	    				beta = Math.min(beta, v);
+	    				if(beta <= alpha){
+	    					break;
+	    				}
+	    			}
+	    			return v;
+    			} 
     		}
     }
 }
