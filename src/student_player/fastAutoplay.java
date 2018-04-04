@@ -50,7 +50,7 @@ public class fastAutoplay {
 		
 	}
 	
-	public static void randomSimulate(int n_games) {
+	public static void randomSimulate(int n_games) { //for generating randomized game data
 		//long start = System.currentTimeMillis();
 		
 		for(int i = 0; i < n_games; i++) {
@@ -94,7 +94,7 @@ public class fastAutoplay {
 		//System.out.println(n_games + " games took " + ((double)(end - start)/1000.0) + " seconds");
 	}
 	
-	public static int RvSSim() {
+	public static int RvSSim() { //Random vs. Student
 		bs = new TablutBoardState();
 		p1 = new RandomTablutPlayer();
 		p2 = new StudentPlayer();
@@ -130,7 +130,7 @@ public class fastAutoplay {
 		return 0;
 	}
 	
-	public static int SvRSim() {
+	public static int SvRSim() { //Student vs. Random
 		bs = new TablutBoardState();
 		p1 = new StudentPlayer();
 		p2 = new RandomTablutPlayer();

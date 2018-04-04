@@ -18,7 +18,7 @@ public class StudentPlayer extends TablutPlayer {
 	HashMap<String, Integer> moveSeen = new HashMap<String, Integer>();
 	int player;
 	int opponent;
-	public static final double balance = 0; //adjustment for the asymmetrical game in unseen moves
+	public static double balance = 0; //adjustment for the asymmetrical game in unseen moves
 	public static final double aggression = 0.15; //how much taking a piece is valued
 	public static final double optimism = 0.05; //weighting for kings proximity to corner
 	public static final double familiarity = 0; //penalty for making the same move multiple times
@@ -38,6 +38,7 @@ public class StudentPlayer extends TablutPlayer {
      * make decisions.
      */
     public Move chooseMove(TablutBoardState bs) {
+    		//long start = System.currentTimeMillis();
     		double finalMoveScore;
     		if(bs.getTurnNumber() == 0) { //first turn set up
     			moveValue = MyTools.deserializeRAVE(); //deserialize action value HashMap 
@@ -49,6 +50,10 @@ public class StudentPlayer extends TablutPlayer {
         		else {
         			player = 0;
         		}
+    			
+    			if(moveValue.containsKey("average")) { //redundant check, but do it anyways
+        			balance = moveValue.get("average");
+    			}
     		}
     		
 	    Move myMove = randomMove(bs);
@@ -57,7 +62,10 @@ public class StudentPlayer extends TablutPlayer {
 	        ArrayList<TablutMove> moves = bs.getAllLegalMoves();
 	        for(TablutMove move : moves) {
 	        		double moveScore = alphabeta(move, bs, 1, -1000000, 1000000, true);
-		       	if(moveScore > myMoveScore) {
+		       	if(moveScore < -90) { //do not consider moves that will make you lose
+		       		continue;
+		       	}
+	        		if(moveScore > myMoveScore) {
 		       		myMove = move;
 		        		myMoveScore = moveScore;
 		        	}
@@ -69,6 +77,9 @@ public class StudentPlayer extends TablutPlayer {
     	        ArrayList<TablutMove> moves = bs.getAllLegalMoves();
     	        for(TablutMove move : moves) {
     	        		double moveScore = alphabeta(move, bs, 1, -1000000, 1000000, false);
+    	        		if(moveScore > 90) { //do not consider moves that will make you lose
+    			       		continue;
+    			       	}
     		       	if(moveScore < myMoveScore) {
     		       		myMove = move;
     		        		myMoveScore = moveScore;
@@ -78,6 +89,7 @@ public class StudentPlayer extends TablutPlayer {
     		}
     		//System.out.println("Move: " + myMove.toTransportable() + " Value: " + finalMoveScore);
     		moveSeen.put(myMove.toTransportable(), 1); //remember the moves we've already made TODO increasing penalty for each time we make it
+    		//System.out.println("Turn took: " + (System.currentTimeMillis() - start) + " ms");
     		return myMove;
     }
     
@@ -126,7 +138,7 @@ public class StudentPlayer extends TablutPlayer {
     		Coord kingPos = bs.getKingPosition();
 	    	if(kingPos != null) {
 	    		int distToCorner = Coordinates.distanceToClosestCorner(kingPos);
-	    		value += 8 - optimism*distToCorner;
+	    		value += (8 - distToCorner)*optimism;
 	    	}
     		return value;
     }

@@ -61,11 +61,32 @@ public class RaveParser {
 		    		}
 		    		
 		    }
+
+		    HashSet<String> insufficientData = new HashSet<String>();
+	    				
 		    for(String move: moveCount.keySet()) { //calculate value for every move seen
 		    		int mc = moveCount.get(move);
 		    		int ms = moveScore.get(move);
-		    		moveValue.put(move, (((double) ms)/((double)mc)));
+		    		
+		    		if(mc < 20) { //not seen enough for a reliable value, so we will give it the average score
+		    			insufficientData.add(move);
+		    		}
+		    		else {
+		    			moveValue.put(move, (((double) ms)/((double)mc)));
+		    		}
 		    }
+		    
+		    double valueSum = 0;
+		    for(double v: moveValue.values()) { //for calculating average
+		    		valueSum += v;
+		    	}
+		    	double average = (double)valueSum/((double)(moveScore.keySet().size())); //sum of scores over number of moves
+		    	moveValue.put("average", average); //add average to HashMap as a special value
+		    
+		    	for(String move : insufficientData) { //assign average to rarely seen moves
+		    		moveValue.put(move, average);
+		    	}
+		
 		    try{ //serialize RAVE data
 	                  FileOutputStream fileOut = new FileOutputStream("data/RAVE.ser");
 	                  ObjectOutputStream objectOut = new ObjectOutputStream(fileOut);
