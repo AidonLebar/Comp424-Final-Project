@@ -23,9 +23,11 @@ public class fastAutoplay {
 			for(int i = 0; i < n_games; i++) {
 				int winner;
 				if(i%2 == 0) { //alternating sides
+					//System.out.println("SvR");
 					winner = SvRSim();
 				}
 				else {
+					//System.out.println("RvS");
 					winner = RvSSim();
 				}
 				
@@ -40,6 +42,7 @@ public class fastAutoplay {
 				else {
 					System.out.println("D");
 					draws++;
+					continue;
 				}
 			}
 			System.out.println("Draws: " + draws + " Student Wins: " + sWins + " Random Wins: " + rWins);
@@ -156,7 +159,6 @@ public class fastAutoplay {
 					return -1;
 				}
 				else {
-					System.out.println("D");
 					return 0;
 				}
 			}
