@@ -15,34 +15,43 @@ public class genetic {
 		int n_matches = Integer.parseInt(args[1]);
 		StudentPlayer p1 = generate();
 		StudentPlayer p2 = generate();
-
 		
-		for(int m = 0; m < n_matches; m++ ) {
+		for(int m = 0; m < n_matches; m++ ) { //match counter
 			System.out.println("MATCH " + m);
 						
 			int win1 = 0;
 			int win2 = 0;
 			int draw = 0;
 		
-			for(int i = 0; i < n_games; i++) {
+			for(int i = 0; i < n_games; i++) { //game counter
 				
 				System.out.println("Game " + i);
 				
-				StudentPlayer winner = playGame(p1, p2);
-				if(winner == null) {
-					draw++;
+				if(i%2 == 0) {
+					StudentPlayer winner = playGame(p1, p2);
+					if(winner == null) {
+						draw++;
+					}
+					else if(winner.equals(p1)){
+						win1++;
+					}
+					else if(winner.equals(p2)) {
+						win2++;
+					}
 				}
-				else if(winner.equals(p1)){
-					win1++;
-				}
-				else if(winner.equals(p2)) {
-					win2++;
+				else {
+					StudentPlayer winner = playGame(p2, p1);
+					if(winner == null) {
+						draw++;
+					}
+					else if(winner.equals(p1)){
+						win2++;
+					}
+					else if(winner.equals(p2)) {
+						win1++;
+					}
 				}
 				
-				//swap sides each game
-				StudentPlayer temp = p1;
-				p1 = p2;
-				p2 = temp;
 	
 			}
 			System.out.println("P1 wins : " + win1 + " P2 wins : " + win2 + " Draws: " + draw);
