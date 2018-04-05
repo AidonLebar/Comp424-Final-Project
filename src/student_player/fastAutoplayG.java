@@ -6,7 +6,7 @@ import java.util.Random;
 import boardgame.Move;
 import tablut.*;
 
-public class fastAutoplay {
+public class fastAutoplayG { //same as fastAutoplay but for greedy instead of random
 	static public TablutBoardState bs;
 	static public TablutPlayer p1;
 	static public TablutPlayer p2;
@@ -26,13 +26,13 @@ public class fastAutoplay {
 				int winner;
 				int player;
 				if(i%2 == 0) { //alternating sides
-					//System.out.println("SvR");
-					winner = SvRSim();
+					//System.out.println("SvG");
+					winner = SvGSim();
 					player = 0;
 				}
 				else {
-					//System.out.println("RvS");
-					winner = RvSSim();
+					//System.out.println("GvS");
+					winner = GvSSim();
 					player = 1;
 				}
 				
@@ -56,7 +56,8 @@ public class fastAutoplay {
 					continue;
 				}
 			}
-			System.out.println("Draws: " + draws + " Student Wins: " + sWins + " Random Wins: " + rWins);
+			//System.out.println("Draws: " + draws + " Student Wins: " + sWins + " Random Wins: " + rWins);
+			System.out.println("Draws: " + draws + " Student Wins: " + sWins + " Greedy Wins: " + rWins);
 			System.out.println("Wins as Swedes: " + swWins);
 			System.out.println("Wins as Muscovites: " + mWins);
 		}
@@ -68,8 +69,8 @@ public class fastAutoplay {
 		
 		for(int i = 0; i < n_games; i++) {
 			bs = new TablutBoardState();
-			p1 = new RandomTablutPlayer();
-			p2 = new RandomTablutPlayer();
+			p1 = new GreedyTablutPlayer();
+			p2 = new GreedyTablutPlayer();
 			while(bs.getTurnNumber() <= bs.MAX_TURNS) {
 				TablutMove p1move = (TablutMove)p1.chooseMove(bs);
 				System.out.println(p1move.toTransportable());
@@ -107,9 +108,8 @@ public class fastAutoplay {
 		//System.out.println(n_games + " games took " + ((double)(end - start)/1000.0) + " seconds");
 	}
 	
-	public static int RvSSim() { //Random vs. Student
+	public static int GvSSim() { //Greedy vs. Student
 		bs = new TablutBoardState();
-		//p1 = new RandomTablutPlayer();
 		p1 = new GreedyTablutPlayer();
 		p2 = new StudentPlayer();
 		
@@ -144,10 +144,9 @@ public class fastAutoplay {
 		return 0;
 	}
 	
-	public static int SvRSim() { //Student vs. Random
+	public static int SvGSim() { //Student vs. Greedy
 		bs = new TablutBoardState();
 		p1 = new StudentPlayer();
-		//p2 = new RandomTablutPlayer();
 		p2 = new GreedyTablutPlayer();
 		
 		while(bs.getTurnNumber() <= bs.MAX_TURNS) {
