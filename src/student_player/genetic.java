@@ -15,13 +15,14 @@ public class genetic {
 		int n_matches = Integer.parseInt(args[1]);
 		StudentPlayer p1 = generate();
 		StudentPlayer p2 = generate();
-		
-		int win1 = 0;
-		int win2 = 0;
-		int draw = 0;
+
 		
 		for(int m = 0; m < n_matches; m++ ) {
 			System.out.println("MATCH " + m);
+						
+			int win1 = 0;
+			int win2 = 0;
+			int draw = 0;
 		
 			for(int i = 0; i < n_games; i++) {
 				
