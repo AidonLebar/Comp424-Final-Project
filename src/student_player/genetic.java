@@ -19,46 +19,7 @@ public class genetic {
 			
 			System.out.println("Game " + i);
 			
-			while(bs.getTurnNumber() <= bs.MAX_TURNS) {
-				Move p1Move = p1.chooseMove(bs);
-				
-				bs.processMove((TablutMove) p1Move);
-				
-				if(bs.gameOver()) {
-					if(bs.getWinner() == 0) {
-						System.out.println("P1 winner : " + Arrays.toString(p1.getWeights()));
-						System.out.println("P2 loser : " + Arrays.toString(p2.getWeights()));
-					}
-					else if(bs.getWinner() == 1){
-						System.out.println("P2 winner : " + Arrays.toString(p2.getWeights()));
-						System.out.println("P1 loser : " + Arrays.toString(p1.getWeights()));
-					}
-					else {
-						System.out.println("P2 draw : " + Arrays.toString(p2.getWeights()));
-						System.out.println("P1 draw : " + Arrays.toString(p1.getWeights()));
-					}
-					break;
-				}
-
-				Move p2Move = p2.chooseMove(bs);
-				bs.processMove((TablutMove) p2Move);
-				
-				if(bs.gameOver()) {
-					if(bs.getWinner() == 0) {
-						System.out.println("P1 winner : " + Arrays.toString(p1.getWeights()));
-						System.out.println("P2 loser : " + Arrays.toString(p2.getWeights()));
-					}
-					else if(bs.getWinner() == 1){
-						System.out.println("P2 winner : " + Arrays.toString(p2.getWeights()));
-						System.out.println("P1 loser : " + Arrays.toString(p1.getWeights()));
-					}
-					else {
-						System.out.println("P2 draw : " + Arrays.toString(p2.getWeights()));
-						System.out.println("P1 draw : " + Arrays.toString(p1.getWeights()));
-					}
-					break;
-				}
-			}
+			playGame(p1, p2);
 
 		}
 	}
@@ -76,5 +37,55 @@ public class genetic {
 			rands[i] = rand.nextDouble();
 		}
 		return rands;
+	}
+	
+	public static int playGame(StudentPlayer p1, StudentPlayer p2) {
+		TablutBoardState bs = new TablutBoardState();
+		
+		while(bs.getTurnNumber() <= bs.MAX_TURNS) {
+			Move p1Move = p1.chooseMove(bs);
+			
+			bs.processMove((TablutMove) p1Move);
+			
+			if(bs.gameOver()) {
+				if(bs.getWinner() == 0) {
+					System.out.println("P1 winner : " + Arrays.toString(p1.getWeights()));
+					System.out.println("P2 loser : " + Arrays.toString(p2.getWeights()));
+					return 1; //p1 won
+				}
+				else if(bs.getWinner() == 1){
+					System.out.println("P2 winner : " + Arrays.toString(p2.getWeights()));
+					System.out.println("P1 loser : " + Arrays.toString(p1.getWeights()));
+					return 2; //p2 won
+				}
+				else {
+					System.out.println("P2 draw : " + Arrays.toString(p2.getWeights()));
+					System.out.println("P1 draw : " + Arrays.toString(p1.getWeights()));
+					return 0; //draw
+				}
+			}
+
+			Move p2Move = p2.chooseMove(bs);
+			bs.processMove((TablutMove) p2Move);
+			
+			if(bs.gameOver()) {
+				if(bs.getWinner() == 0) {
+					System.out.println("P1 winner : " + Arrays.toString(p1.getWeights()));
+					System.out.println("P2 loser : " + Arrays.toString(p2.getWeights()));
+					return 1; //p1 won
+				}
+				else if(bs.getWinner() == 1){
+					System.out.println("P2 winner : " + Arrays.toString(p2.getWeights()));
+					System.out.println("P1 loser : " + Arrays.toString(p1.getWeights()));
+					return 0; //p2 won
+				}
+				else {
+					System.out.println("P2 draw : " + Arrays.toString(p2.getWeights()));
+					System.out.println("P1 draw : " + Arrays.toString(p1.getWeights()));
+					return 0; //draw
+				}
+			}
+		}
+		return -1; //error
 	}
 }
