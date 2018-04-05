@@ -15,7 +15,6 @@ public class genetic {
 		for(int i = 0; i < n_games; i++) {
 			StudentPlayer p1 = generate();
 			StudentPlayer p2 = generate();
-			TablutBoardState bs = new TablutBoardState();
 			
 			System.out.println("Game " + i);
 			
@@ -39,7 +38,8 @@ public class genetic {
 		return rands;
 	}
 	
-	public static int playGame(StudentPlayer p1, StudentPlayer p2) {
+	//Will return null on draw, be wary
+	public static StudentPlayer playGame(StudentPlayer p1, StudentPlayer p2) {
 		TablutBoardState bs = new TablutBoardState();
 		
 		while(bs.getTurnNumber() <= bs.MAX_TURNS) {
@@ -51,17 +51,17 @@ public class genetic {
 				if(bs.getWinner() == 0) {
 					System.out.println("P1 winner : " + Arrays.toString(p1.getWeights()));
 					System.out.println("P2 loser : " + Arrays.toString(p2.getWeights()));
-					return 1; //p1 won
+					return p1; //p1 won
 				}
 				else if(bs.getWinner() == 1){
 					System.out.println("P2 winner : " + Arrays.toString(p2.getWeights()));
 					System.out.println("P1 loser : " + Arrays.toString(p1.getWeights()));
-					return 2; //p2 won
+					return p2; //p2 won
 				}
 				else {
 					System.out.println("P2 draw : " + Arrays.toString(p2.getWeights()));
 					System.out.println("P1 draw : " + Arrays.toString(p1.getWeights()));
-					return 0; //draw
+					return null; //draw
 				}
 			}
 
@@ -72,20 +72,20 @@ public class genetic {
 				if(bs.getWinner() == 0) {
 					System.out.println("P1 winner : " + Arrays.toString(p1.getWeights()));
 					System.out.println("P2 loser : " + Arrays.toString(p2.getWeights()));
-					return 1; //p1 won
+					return p1; //p1 won
 				}
 				else if(bs.getWinner() == 1){
 					System.out.println("P2 winner : " + Arrays.toString(p2.getWeights()));
 					System.out.println("P1 loser : " + Arrays.toString(p1.getWeights()));
-					return 0; //p2 won
+					return p2; //p2 won
 				}
 				else {
 					System.out.println("P2 draw : " + Arrays.toString(p2.getWeights()));
 					System.out.println("P1 draw : " + Arrays.toString(p1.getWeights()));
-					return 0; //draw
+					return null; //draw
 				}
 			}
 		}
-		return -1; //error
+		return null; //error
 	}
 }
