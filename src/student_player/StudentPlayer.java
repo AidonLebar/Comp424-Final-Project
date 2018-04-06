@@ -18,14 +18,15 @@ public class StudentPlayer extends TablutPlayer {
 	HashMap<String, Integer> moveSeen = new HashMap<String, Integer>();
 	int player;
 	int opponent;
-	long start;
 	
 	//default values
-	public static double balance = 0; //adjustment for the asymmetrical game in unseen moves
-	public static double aggression = 0.2; //how much taking a piece is valued
-	public static double optimism = 0.05; //weighting for kings proximity to corner
-	public static double familiarity = 0; //penalty for making the same move multiple times
-	public static int depth = 1;
+	public double balance = 0; //adjustment for the asymmetrical game in unseen moves
+	public double aggression = 0.3; //how much taking a piece is valued
+	public double grit = 0.3; //penalty against losing pieces
+	public double optimism = 0.05; //weighting for kings proximity to corner
+	public double familiarity = 0; //penalty for making the same move multiple times
+	public double commitment = 0.4; //penalty against undoing previous move
+	public int depth = 1;
 	
 	String prevMove = ""; //to avoid null pointer on first move
 
@@ -44,7 +45,7 @@ public class StudentPlayer extends TablutPlayer {
      * make decisions.
      */
     public Move chooseMove(TablutBoardState bs) {
-    		start = System.currentTimeMillis();
+    		//long start = System.currentTimeMillis();
     		double finalMoveScore;
     		int turnNumber = bs.getTurnNumber();
     		if(turnNumber == 0) { //first turn set up
@@ -59,17 +60,16 @@ public class StudentPlayer extends TablutPlayer {
         		}
     			
     			if(moveValue.containsKey("average")) { //redundant check, but do it anyways
-        			balance = moveValue.get("average");
-    			}
+       			balance = moveValue.get("average"); //TODO check if this is important after genetic
+    			}   		
+        		
     		}
     		
-    		if(bs.getTurnNumber() == 40) {
-    			if(player == 0) {
-    				aggression += 0.5;
-    			}
+    		if(player == 0) { //TODO check if this is important after genetic algo
+    			aggression += 0.6;
     		}
-
-		boolean changed = false;
+ 
+		//boolean changed = false;
 	    Move myMove = randomMove(bs);
     		if(player == 1) { //player is Swedes
     			double myMoveScore = alphabeta(myMove, bs, depth, -1000000, 1000000, false);
@@ -78,6 +78,10 @@ public class StudentPlayer extends TablutPlayer {
 	        		double moveScore = alphabeta(move, bs, depth, -1000000, 1000000, false);
 		       	if(moveScore < -900) { //do not consider moves that will make you lose
 		       		continue;
+		       	}
+		       	if(moveScore > 900) {
+		       		myMove = move;
+		       		break;
 		       	}
 	        		if(moveScore > myMoveScore) {
 		       		myMove = move;
@@ -95,6 +99,10 @@ public class StudentPlayer extends TablutPlayer {
     	        		if(moveScore > 900) { //do not consider moves that will make you lose
     	        				continue;
     			    }
+    	        		if(moveScore < -900) {
+    			       		myMove = move;
+    			       		break;
+    			       	}
     		       	if(moveScore < myMoveScore) {
     		       		myMove = move;
     		        		myMoveScore = moveScore;
@@ -103,33 +111,55 @@ public class StudentPlayer extends TablutPlayer {
     	        }
     	        finalMoveScore = myMoveScore;
     		}
-    		moveSeen.put(myMove.toTransportable(), 1); //remember the moves we've already made 
-    		//TODO increasing penalty for each time we make it 		
+    		
+    		if(moveSeen.containsKey(myMove.toTransportable())){ //makes a move worse each time it is seen
+    			moveSeen.put(myMove.toTransportable(), (moveSeen.get(myMove.toTransportable()) + 1));
+    		}
+    		else {
+    			moveSeen.put(myMove.toTransportable(), 1);
+    		}
+    		
     		prevMove = myMove.toTransportable();
     		
     		//System.out.println("Move: " + myMove.toTransportable() + " Value: " + finalMoveScore);
     		//System.out.println("Turn took: " + (System.currentTimeMillis() - start) + " ms");
     		//System.out.println("Changed random move: " + changed);
-    		//System.out.println("Depth: " + depth + " with " + bs.getNumberPlayerPieces(opponent) + " enemy pieces and " + bs.getNumberPlayerPieces(player) + " of our pieces" + " pieces on the board.");
     	
     		return myMove;
     }
     
     
-    public Move randomMove(TablutBoardState bs) {
+    public Move randomMove(TablutBoardState bs) { //non-seeded random move
     	 	ArrayList<TablutMove> moves = bs.getAllLegalMoves();
     	 	return moves.get(rand.nextInt(moves.size()));
     }
     
-    public void setWeights(double w0, double w1, double w2, double w3) { //to change params
+    public void setWeights(double w0, double w1, double w2, double w3, double w4, double w5, int d) { //to change params
     		balance = w0;
     		aggression = w1;
     		optimism = w2;
     		familiarity = w3;
+    		grit = w4;
+    		commitment = w5;
+    		depth = d;
+    		
     }
     
-    //RAVE-based eval with bonuses for winning and taking pieces, penalties for undoing or repeating moves
-    public double eval(Move move, TablutBoardState bs, int prevOpPieces, int currentOpPieces) { 
+    public double[] getWeights() {
+    		double[] weights = new double[6];
+    		weights[0] = balance;
+    		weights[1] = aggression;
+    		weights[2] = optimism;
+    		weights[3] = familiarity;
+    		weights[4] = grit;
+    		weights[5] = commitment;
+    		return weights;
+    }
+    
+    //RAVE-based eval
+    //bonuses for winning and taking pieces
+    //penalties for undoing or repeating moves and losing pieces
+    public double eval(Move move, TablutBoardState bs, int prevOpPieces, int currentOpPieces, int prevPieces, int currentPieces) { 
     		double value;
     		if(moveValue.containsKey(move.toTransportable())) {
 			value =  moveValue.get(move.toTransportable());
@@ -154,16 +184,15 @@ public class StudentPlayer extends TablutPlayer {
 			else if(winner == 1) {
 				value += 1000.0;
 			}
-//			else {
-//				if(bs.getTurnNumber() > 40) { //penalty on draw if late game
-//		    			value -= 0.5*direction;
-//				}
-//			}
 		}
     		
     		if(prevOpPieces > currentOpPieces) { //bonus for taking pieces with this move
 			value += (prevOpPieces - currentOpPieces)*aggression*direction; //because multiple pieces can be taken in one move
 		}
+    		
+    		if(prevPieces > currentPieces) { //penalty for losing pieces
+    			value -= (prevPieces - currentPieces)*grit*direction;
+    		}
     		
     		if(moveSeen.containsKey(move.toTransportable())) { //penalty against moves we've already made
     			value -= direction*familiarity;
@@ -176,7 +205,7 @@ public class StudentPlayer extends TablutPlayer {
 	    	}
 	    	
 	    	if(move.toTransportable().equals(prevMove)) { //dont immediately undo a move
-	    		value -= 0.5*direction;
+	    		value -= commitment*direction;
 	    	}
 	    	
     		return value;
@@ -202,7 +231,9 @@ public class StudentPlayer extends TablutPlayer {
     		if(toMaxDepth <= 0) { //max depth reached
     			int prevOpPieces = bs.getNumberPlayerPieces(opponent);
     			int currentOpPieces = bsClone.getNumberPlayerPieces(opponent);
-    	 		return eval(m, bs, prevOpPieces, currentOpPieces);
+    			int prevPieces = bs.getNumberPlayerPieces(player);
+    			int currentPieces = bsClone.getNumberPlayerPieces(player);
+    	 		return eval(m, bs, prevOpPieces, currentOpPieces, prevPieces, currentPieces);
     	 	}
     		//MAX PLAYER
     		if(max) {
