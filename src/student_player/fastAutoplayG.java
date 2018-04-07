@@ -48,12 +48,13 @@ public class fastAutoplayG { //same as fastAutoplay but for greedy instead of ra
 				}
 				else if(winner == -1) {
 					System.out.println("Lose as " + player);
+					bs.printBoard();
 					rWins++;
 				}
 				else {
 					System.out.println("Draw as " + player);
+					bs.printBoard();
 					draws++;
-					continue;
 				}
 			}
 			//System.out.println("Draws: " + draws + " Student Wins: " + sWins + " Random Wins: " + rWins);

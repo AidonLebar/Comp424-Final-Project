@@ -28,7 +28,7 @@ public class StudentPlayer extends TablutPlayer {
 	public double commitment = 0.4; //penalty against undoing previous move
 	public double liberty = 0.3; //weight on the king being surrounded
 	public int foresight = 2; //depth of search
-	public int daring = 1990; //timeout limit in ms
+	public int daring = 1995; //timeout limit in ms
 	
 	String prevMove = ""; //to avoid null pointer on first move
 
@@ -48,7 +48,7 @@ public class StudentPlayer extends TablutPlayer {
      */
     public Move chooseMove(TablutBoardState bs) {
     		long start = System.currentTimeMillis();
-    		long testStart = System.currentTimeMillis();
+    		//long testStart = System.currentTimeMillis();
     		//double finalMoveScore;
     		int turnNumber = bs.getTurnNumber();
     		if(turnNumber == 0) { //first turn set up
@@ -66,7 +66,7 @@ public class StudentPlayer extends TablutPlayer {
        			balance = moveValue.get("average");
     			} 
     			
-    			start += 28000;
+    			start += 28000; //first move gets more time
         		
     		}
     		
@@ -129,7 +129,7 @@ public class StudentPlayer extends TablutPlayer {
     		prevMove = myMove.toTransportable();
     		
     		//System.out.println("Move: " + myMove.toTransportable() + " Value: " + finalMoveScore);
-    		System.out.println("Turn took: " + (System.currentTimeMillis() - testStart) + " ms");
+    		//System.out.println("Turn took: " + (System.currentTimeMillis() - testStart) + " ms");
     		//System.out.println("Changed random move: " + changed);
     	
     		return myMove;
@@ -206,7 +206,7 @@ public class StudentPlayer extends TablutPlayer {
     			value -= familiarity*moveSeen.get(move.toTransportable());
     		}
     		
-    		Coord kingPos = bs.getKingPosition();
+    		Coord kingPos = bs.getKingPosition(); //king's distance to corner
 	    	if(kingPos != null) {
 	    		int distToCorner = Coordinates.distanceToClosestCorner(kingPos);
 	    		value += (1.0/distToCorner)*optimism;

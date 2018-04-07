@@ -48,12 +48,13 @@ public class fastAutoplay {
 				}
 				else if(winner == -1) {
 					System.out.println("Lose as " + player);
+					bs.printBoard();
 					rWins++;
 				}
 				else {
 					System.out.println("Draw as " + player);
 					draws++;
-					continue;
+					bs.printBoard();
 				}
 			}
 			System.out.println("Draws: " + draws + " Student Wins: " + sWins + " Random Wins: " + rWins);

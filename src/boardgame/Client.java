@@ -12,7 +12,8 @@ import java.lang.Exception;
  * subclass instead.
  */
 public class Client implements Runnable {
-    protected static final String DEFAULT_SERVER = "localhost";
+	protected static final String DEFAULT_SERVER = "localhost";
+    //protected static final String DEFAULT_SERVER = "192.168.1.106";
     protected static final int DEFAULT_PORT = Server.DEFAULT_PORT;
     protected static final String DEFAULT_PLAYER = "tablut.RandomPlayer";
     protected static final boolean DBGNET = true;
