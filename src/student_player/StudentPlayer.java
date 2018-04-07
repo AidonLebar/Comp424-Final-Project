@@ -69,10 +69,6 @@ public class StudentPlayer extends TablutPlayer {
     			start += 28000; //first move gets more time
         		
     		}
-    		
-    		if(player == 0) { //muscovites should be more aggressive
-    			aggression += 0.7;
-    		}
  
 		//boolean changed = false;
 	    TablutMove myMove = (TablutMove)randomMove(bs);
@@ -168,6 +164,10 @@ public class StudentPlayer extends TablutPlayer {
     //penalties for undoing or repeating moves and losing pieces
     //hopefully player agnostic for use by alpha beta
     public double eval(TablutMove move, TablutBoardState bs, int prevOpPieces, int currentOpPieces, int prevPieces, int currentPieces, int player) { 
+   		if(player == 0) { //muscovites less obsessed with surrounding king
+   			liberty -= 0.2;
+		}
+    	
     		double value;
     		if(moveValue.containsKey(move.toTransportable())) {
 			value =  moveValue.get(move.toTransportable());
@@ -220,6 +220,10 @@ public class StudentPlayer extends TablutPlayer {
 		   // 	Coord end = move.getEndPosition(); //piece does not want to move where it is surrounded
 		    	value -= opponentsAdjacent(kingPos ,bs)*liberty*direction;
 		//}
+		    	
+		if(player == 0) { //return liberty to same level
+		   	liberty += 0.2;
+		}
 	    	
     		return value;
     }
@@ -239,15 +243,17 @@ public class StudentPlayer extends TablutPlayer {
     		TablutBoardState bsClone = (TablutBoardState) bs.clone();
 		bsClone.processMove((TablutMove) m);
 		
-		if(bsClone.gameOver()) { //if game ends this next move, no need to recurse
-			if(bsClone.getWinner() == 1) { //swedes win
-				return 1000.0;
-			}
-			else if(bsClone.getWinner() == 0){ //muscovites win
-				return -1000.0;
-			}
-			else {
-				return balance;
+		if(toMaxDepth == foresight) {
+			if(bsClone.gameOver()) { //if game ends this next move, no need to recurse
+				if(bsClone.getWinner() == 1) { //swedes win
+					return 1000.0;
+				}
+				else if(bsClone.getWinner() == 0){ //muscovites win
+					return -1000.0;
+				}
+				else {
+					return balance;
+				}
 			}
 		}
     	
