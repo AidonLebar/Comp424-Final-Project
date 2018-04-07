@@ -48,8 +48,6 @@ public class StudentPlayer extends TablutPlayer {
      */
     public Move chooseMove(TablutBoardState bs) {
     		long start = System.currentTimeMillis();
-    		//long testStart = System.currentTimeMillis();
-    		//double finalMoveScore;
     		int turnNumber = bs.getTurnNumber();
     		if(turnNumber == 0) { //first turn set up
     			moveValue = MyTools.deserializeRAVE(); //deserialize action value HashMap 
@@ -70,7 +68,6 @@ public class StudentPlayer extends TablutPlayer {
         		
     		}
  
-		//boolean changed = false;
 	    TablutMove myMove = (TablutMove)randomMove(bs);
     		if(player == 1) { //player is Swedes
     			double myMoveScore = alphabeta(myMove, bs, foresight, -1000000, 1000000, false, start);
@@ -88,10 +85,8 @@ public class StudentPlayer extends TablutPlayer {
 	        		if(moveScore > myMoveScore) {
 		       		myMove = move;
 		        		myMoveScore = moveScore;
-		        		//changed = true;
 		        	}
 	        }
-	        //finalMoveScore = myMoveScore;
     		}
     		else { //player is Muscovites
     			double myMoveScore = alphabeta(myMove, bs, foresight, -1000000, 1000000, true, start);
@@ -109,10 +104,8 @@ public class StudentPlayer extends TablutPlayer {
     		       	if(moveScore < myMoveScore) {
     		       		myMove = move;
     		        		myMoveScore = moveScore;
-    		        		//changed = true;
     		        	}
     	        }
-    	        //finalMoveScore = myMoveScore;
     		}
     		
     		if(moveSeen.containsKey(myMove.toTransportable())){ //makes a move worse each time it is seen
@@ -123,11 +116,7 @@ public class StudentPlayer extends TablutPlayer {
     		}
     		
     		prevMove = myMove.toTransportable();
-    		
-    		//System.out.println("Move: " + myMove.toTransportable() + " Value: " + finalMoveScore);
-    		//System.out.println("Turn took: " + (System.currentTimeMillis() - testStart) + " ms");
-    		//System.out.println("Changed random move: " + changed);
-    	
+  	
     		return myMove;
     }
     
@@ -211,15 +200,8 @@ public class StudentPlayer extends TablutPlayer {
 	    		int distToCorner = Coordinates.distanceToClosestCorner(kingPos);
 	    		value += (1.0/distToCorner)*optimism;
 	    	}
-	    	
-//	    	if(move.toTransportable().equals(prevMove)) { //dont immediately undo a move
-//	    		value -= commitment*direction;
-//	    	}
-	    
-	    	//if(player == 1) {
-		   // 	Coord end = move.getEndPosition(); //piece does not want to move where it is surrounded
-		    	value -= opponentsAdjacent(kingPos ,bs)*liberty*direction;
-		//}
+		
+	    	value -= opponentsAdjacent(kingPos ,bs)*liberty*direction;
 		    	
 		if(player == 0) { //return liberty to same level
 		   	liberty += 0.2;
