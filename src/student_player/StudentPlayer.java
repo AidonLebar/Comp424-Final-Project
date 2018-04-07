@@ -21,12 +21,13 @@ public class StudentPlayer extends TablutPlayer {
 	
 	//default values
 	public double balance = 0; //adjustment for the asymmetrical game in unseen moves
-	public double aggression = 0.3; //how much taking a piece is valued
+	public double aggression = 0.2; //how much taking a piece is valued 0.3
 	public double grit = 0.3; //penalty against losing pieces
 	public double optimism = 0.05; //weighting for kings proximity to corner
-	public double familiarity = 0; //penalty for making the same move multiple times
+	public double familiarity = 0.2; //penalty for making the same move multiple times
 	public double commitment = 0.4; //penalty against undoing previous move
-	public int depth = 1;
+	public double liberty = 0.3; //weight on the king being surrounded
+	public int foresight = 1; //depth of search
 	
 	String prevMove = ""; //to avoid null pointer on first move
 
@@ -46,7 +47,7 @@ public class StudentPlayer extends TablutPlayer {
      */
     public Move chooseMove(TablutBoardState bs) {
     		//long start = System.currentTimeMillis();
-    		double finalMoveScore;
+    		//double finalMoveScore;
     		int turnNumber = bs.getTurnNumber();
     		if(turnNumber == 0) { //first turn set up
     			moveValue = MyTools.deserializeRAVE(); //deserialize action value HashMap 
@@ -60,22 +61,22 @@ public class StudentPlayer extends TablutPlayer {
         		}
     			
     			if(moveValue.containsKey("average")) { //redundant check, but do it anyways
-       			balance = moveValue.get("average"); //TODO check if this is important after genetic
+       			balance = moveValue.get("average");
     			}   		
         		
     		}
     		
-    		if(player == 0) { //TODO check if this is important after genetic algo
-    			aggression += 0.6;
+    		if(player == 0) {
+    			aggression += 0.4;
     		}
  
 		//boolean changed = false;
-	    Move myMove = randomMove(bs);
+	    TablutMove myMove = (TablutMove)randomMove(bs);
     		if(player == 1) { //player is Swedes
-    			double myMoveScore = alphabeta(myMove, bs, depth, -1000000, 1000000, false);
+    			double myMoveScore = alphabeta(myMove, bs, foresight, -1000000, 1000000, false);
 	        ArrayList<TablutMove> moves = bs.getAllLegalMoves();
 	        for(TablutMove move : moves) {
-	        		double moveScore = alphabeta(move, bs, depth, -1000000, 1000000, false);
+	        		double moveScore = alphabeta(move, bs, foresight, -1000000, 1000000, false);
 		       	if(moveScore < -900) { //do not consider moves that will make you lose
 		       		continue;
 		       	}
@@ -89,13 +90,13 @@ public class StudentPlayer extends TablutPlayer {
 		        		//changed = true;
 		        	}
 	        }
-	        finalMoveScore = myMoveScore;
+	        //finalMoveScore = myMoveScore;
     		}
     		else { //player is Muscovites
-    			double myMoveScore = alphabeta(myMove, bs, depth, -1000000, 1000000, true);
+    			double myMoveScore = alphabeta(myMove, bs, foresight, -1000000, 1000000, true);
     	        ArrayList<TablutMove> moves = bs.getAllLegalMoves();
     	        for(TablutMove move : moves) {
-    	        		double moveScore = alphabeta(move, bs, depth, -1000000, 1000000, true);
+    	        		double moveScore = alphabeta(move, bs, foresight, -1000000, 1000000, true);
     	        		if(moveScore > 900) { //do not consider moves that will make you lose
     	        				continue;
     			    }
@@ -109,7 +110,7 @@ public class StudentPlayer extends TablutPlayer {
     		        		//changed = true;
     		        	}
     	        }
-    	        finalMoveScore = myMoveScore;
+    	        //finalMoveScore = myMoveScore;
     		}
     		
     		if(moveSeen.containsKey(myMove.toTransportable())){ //makes a move worse each time it is seen
@@ -141,7 +142,7 @@ public class StudentPlayer extends TablutPlayer {
     		familiarity = w3;
     		grit = w4;
     		commitment = w5;
-    		depth = d;
+    		foresight = d;
     		
     }
     
@@ -156,10 +157,10 @@ public class StudentPlayer extends TablutPlayer {
     		return weights;
     }
     
-    //RAVE-based eval
+    //RAVE-based evaluation
     //bonuses for winning and taking pieces
     //penalties for undoing or repeating moves and losing pieces
-    public double eval(Move move, TablutBoardState bs, int prevOpPieces, int currentOpPieces, int prevPieces, int currentPieces) { 
+    public double eval(TablutMove move, TablutBoardState bs, int prevOpPieces, int currentOpPieces, int prevPieces, int currentPieces) { 
     		double value;
     		if(moveValue.containsKey(move.toTransportable())) {
 			value =  moveValue.get(move.toTransportable());
@@ -199,7 +200,7 @@ public class StudentPlayer extends TablutPlayer {
     		}
     		
     		Coord kingPos = bs.getKingPosition();
-	    	if(kingPos != null) {
+	    	if(kingPos != null) { //TODO adjacent to corner is kind of bad
 	    		int distToCorner = Coordinates.distanceToClosestCorner(kingPos);
 	    		value += (1.0/distToCorner)*optimism;
 	    	}
@@ -207,12 +208,27 @@ public class StudentPlayer extends TablutPlayer {
 	    	if(move.toTransportable().equals(prevMove)) { //dont immediately undo a move
 	    		value -= commitment*direction;
 	    	}
+	    
+	    	if(player == 1) {
+		    	Coord end = move.getEndPosition(); //piece does not want to move where it is surrounded
+		    	value -= opponentsAdjacent(kingPos ,bs)*liberty*direction;
+		}
 	    	
     		return value;
     }
     
+     public int opponentsAdjacent(Coord pos, TablutBoardState bs) { //how many of the opponent pieces are adjacent to a position
+    	 	int i = 0;
+    	 	for(Coord adjacent: Coordinates.getNeighbors(pos)) {
+    	 		if(bs.isOpponentPieceAt(adjacent)){
+    	 			i++;
+    	 		}
+    	 	}
+    	 	return i;
+     }
+    
     //Soft-fail alpha-beta
-    public double alphabeta(Move m, TablutBoardState bs, int toMaxDepth, double alpha, double beta, boolean max) {
+    public double alphabeta(TablutMove m, TablutBoardState bs, int toMaxDepth, double alpha, double beta, boolean max) {
     		TablutBoardState bsClone = (TablutBoardState) bs.clone();
 		bsClone.processMove((TablutMove) m);
 		
