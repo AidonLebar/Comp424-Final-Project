@@ -21,13 +21,14 @@ public class StudentPlayer extends TablutPlayer {
 	
 	//default values
 	public double balance = 0; //adjustment for the asymmetrical game in unseen moves
-	public double aggression = 0.2; //how much taking a piece is valued 0.3
+	public double aggression = 0.3; //how much taking a piece is valued 0.3
 	public double grit = 0.3; //penalty against losing pieces
 	public double optimism = 0.05; //weighting for kings proximity to corner
 	public double familiarity = 0.2; //penalty for making the same move multiple times
 	public double commitment = 0.4; //penalty against undoing previous move
 	public double liberty = 0.3; //weight on the king being surrounded
-	public int foresight = 1; //depth of search
+	public int foresight = 2; //depth of search
+	public int daring = 1990; //timeout limit in ms
 	
 	String prevMove = ""; //to avoid null pointer on first move
 
@@ -46,7 +47,8 @@ public class StudentPlayer extends TablutPlayer {
      * make decisions.
      */
     public Move chooseMove(TablutBoardState bs) {
-    		//long start = System.currentTimeMillis();
+    		long start = System.currentTimeMillis();
+    		long testStart = System.currentTimeMillis();
     		//double finalMoveScore;
     		int turnNumber = bs.getTurnNumber();
     		if(turnNumber == 0) { //first turn set up
@@ -62,21 +64,24 @@ public class StudentPlayer extends TablutPlayer {
     			
     			if(moveValue.containsKey("average")) { //redundant check, but do it anyways
        			balance = moveValue.get("average");
-    			}   		
+    			} 
+    			
+    			start += 28000;
         		
     		}
     		
-    		if(player == 0) {
-    			aggression += 0.4;
+    		if(player == 0) { //muscovites should be more aggressive
+    			aggression += 0.7;
     		}
  
 		//boolean changed = false;
 	    TablutMove myMove = (TablutMove)randomMove(bs);
     		if(player == 1) { //player is Swedes
-    			double myMoveScore = alphabeta(myMove, bs, foresight, -1000000, 1000000, false);
+    			double myMoveScore = alphabeta(myMove, bs, foresight, -1000000, 1000000, false, start);
 	        ArrayList<TablutMove> moves = bs.getAllLegalMoves();
 	        for(TablutMove move : moves) {
-	        		double moveScore = alphabeta(move, bs, foresight, -1000000, 1000000, false);
+	        		double moveScore = alphabeta(move, bs, foresight, -1000000, 1000000, false, start);
+
 		       	if(moveScore < -900) { //do not consider moves that will make you lose
 		       		continue;
 		       	}
@@ -93,10 +98,11 @@ public class StudentPlayer extends TablutPlayer {
 	        //finalMoveScore = myMoveScore;
     		}
     		else { //player is Muscovites
-    			double myMoveScore = alphabeta(myMove, bs, foresight, -1000000, 1000000, true);
+    			double myMoveScore = alphabeta(myMove, bs, foresight, -1000000, 1000000, true, start);
     	        ArrayList<TablutMove> moves = bs.getAllLegalMoves();
     	        for(TablutMove move : moves) {
-    	        		double moveScore = alphabeta(move, bs, foresight, -1000000, 1000000, true);
+    	        		double moveScore = alphabeta(move, bs, foresight, -1000000, 1000000, true, start);
+
     	        		if(moveScore > 900) { //do not consider moves that will make you lose
     	        				continue;
     			    }
@@ -123,7 +129,7 @@ public class StudentPlayer extends TablutPlayer {
     		prevMove = myMove.toTransportable();
     		
     		//System.out.println("Move: " + myMove.toTransportable() + " Value: " + finalMoveScore);
-    		//System.out.println("Turn took: " + (System.currentTimeMillis() - start) + " ms");
+    		System.out.println("Turn took: " + (System.currentTimeMillis() - testStart) + " ms");
     		//System.out.println("Changed random move: " + changed);
     	
     		return myMove;
@@ -160,7 +166,8 @@ public class StudentPlayer extends TablutPlayer {
     //RAVE-based evaluation
     //bonuses for winning and taking pieces
     //penalties for undoing or repeating moves and losing pieces
-    public double eval(TablutMove move, TablutBoardState bs, int prevOpPieces, int currentOpPieces, int prevPieces, int currentPieces) { 
+    //hopefully player agnostic for use by alpha beta
+    public double eval(TablutMove move, TablutBoardState bs, int prevOpPieces, int currentOpPieces, int prevPieces, int currentPieces, int player) { 
     		double value;
     		if(moveValue.containsKey(move.toTransportable())) {
 			value =  moveValue.get(move.toTransportable());
@@ -196,23 +203,23 @@ public class StudentPlayer extends TablutPlayer {
     		}
     		
     		if(moveSeen.containsKey(move.toTransportable())) { //penalty against moves we've already made
-    			value -= direction*familiarity;
+    			value -= familiarity*moveSeen.get(move.toTransportable());
     		}
     		
     		Coord kingPos = bs.getKingPosition();
-	    	if(kingPos != null) { //TODO adjacent to corner is kind of bad
+	    	if(kingPos != null) {
 	    		int distToCorner = Coordinates.distanceToClosestCorner(kingPos);
 	    		value += (1.0/distToCorner)*optimism;
 	    	}
 	    	
-	    	if(move.toTransportable().equals(prevMove)) { //dont immediately undo a move
-	    		value -= commitment*direction;
-	    	}
+//	    	if(move.toTransportable().equals(prevMove)) { //dont immediately undo a move
+//	    		value -= commitment*direction;
+//	    	}
 	    
-	    	if(player == 1) {
-		    	Coord end = move.getEndPosition(); //piece does not want to move where it is surrounded
+	    	//if(player == 1) {
+		   // 	Coord end = move.getEndPosition(); //piece does not want to move where it is surrounded
 		    	value -= opponentsAdjacent(kingPos ,bs)*liberty*direction;
-		}
+		//}
 	    	
     		return value;
     }
@@ -228,7 +235,7 @@ public class StudentPlayer extends TablutPlayer {
      }
     
     //Soft-fail alpha-beta
-    public double alphabeta(TablutMove m, TablutBoardState bs, int toMaxDepth, double alpha, double beta, boolean max) {
+    public double alphabeta(TablutMove m, TablutBoardState bs, int toMaxDepth, double alpha, double beta, boolean max, long start) {
     		TablutBoardState bsClone = (TablutBoardState) bs.clone();
 		bsClone.processMove((TablutMove) m);
 		
@@ -249,7 +256,7 @@ public class StudentPlayer extends TablutPlayer {
     			int currentOpPieces = bsClone.getNumberPlayerPieces(opponent);
     			int prevPieces = bs.getNumberPlayerPieces(player);
     			int currentPieces = bsClone.getNumberPlayerPieces(player);
-    	 		return eval(m, bs, prevOpPieces, currentOpPieces, prevPieces, currentPieces);
+    	 		return eval(m, bs, prevOpPieces, currentOpPieces, prevPieces, currentPieces, bsClone.getTurnPlayer());
     	 	}
     		//MAX PLAYER
     		if(max) {
@@ -267,9 +274,11 @@ public class StudentPlayer extends TablutPlayer {
     			}
     			else { //the game is still on
 	    			for(TablutMove move: bsClone.getAllLegalMoves()) {
-	    				v = Math.max(v, alphabeta(move, bsClone, toMaxDepth-1, alpha, beta, false));
+	    				v = Math.max(v, alphabeta(move, bsClone, toMaxDepth-1, alpha, beta, false, start));
 	    				alpha = Math.max(alpha, v);
 	    				if(beta <= alpha){
+	    					break;
+	    				}if((System.currentTimeMillis() - start) >= daring) { //TIMEOUT IMMINENT
 	    					break;
 	    				}
 	    			}
@@ -292,9 +301,12 @@ public class StudentPlayer extends TablutPlayer {
     			}
     			else { //the game is still on
 	    			for(TablutMove move: bsClone.getAllLegalMoves()) {
-	    				v = Math.min(v, alphabeta(move, bsClone, toMaxDepth-1, alpha, beta, true));
+	    				v = Math.min(v, alphabeta(move, bsClone, toMaxDepth-1, alpha, beta, true, start));
 	    				beta = Math.min(beta, v);
 	    				if(beta <= alpha){
+	    					break;
+	    				}
+	    				if((System.currentTimeMillis() - start) >= daring) { //TIMEOUT IMMINENT
 	    					break;
 	    				}
 	    			}
